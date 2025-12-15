@@ -1,0 +1,282 @@
+{
+  "name": "spotify-vscode-extension",
+  "displayName": "Spotify Player Pro",
+  "description": "🎵 Spotify integration with album artwork, queue display, status bar controls, and playback management",
+  "version": "1.3.0",
+  "publisher": "kushal-raj-g-s",
+  "author": {
+    "name": "Kushal Raj G S",
+    "email": "kushalrajgs@gmail.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kushal-raj-g-s/spotify-vscode-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kushal-raj-g-s/spotify-vscode-extension/issues"
+  },
+  "homepage": "https://github.com/kushal-raj-g-s/spotify-vscode-extension#readme",
+  "keywords": [
+    "spotify",
+    "music",
+    "player",
+    "audio",
+    "playback",
+    "queue",
+    "controls",
+    "sidebar",
+    "status-bar"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "icon": "ext_logo.png",
+  "galleryBanner": {
+    "color": "#1DB954",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "spotify-sidebar",
+          "title": "Spotify",
+          "icon": "./sidebar-logo.png"
+        }
+      ]
+    },
+    "views": {
+      "spotify-sidebar": [
+        {
+          "id": "spotifyPlayer",
+          "name": "Now Playing",
+          "when": "true",
+          "icon": "./sidebar-logo.png"
+        },
+        {
+          "id": "spotifyControls",
+          "name": "Controls",
+          "when": "true",
+          "icon": "$(settings-gear)"
+        },
+        {
+          "id": "spotifyQueue",
+          "name": "Queue",
+          "when": "true",
+          "icon": "$(list-ordered)"
+        },
+        {
+          "id": "spotifyPlaylists",
+          "name": "Playlists",
+          "when": "true",
+          "icon": "$(music)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "spotify.authenticate",
+        "title": "Authenticate Spotify",
+        "category": "Spotify",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "spotify.logout",
+        "title": "Logout from Spotify",
+        "category": "Spotify",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "spotify.refresh",
+        "title": "Refresh Spotify Player",
+        "category": "Spotify",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "spotify.play",
+        "title": "Play",
+        "category": "Spotify",
+        "icon": "$(play)"
+      },
+      {
+        "command": "spotify.pause",
+        "title": "Pause",
+        "category": "Spotify",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "spotify.next",
+        "title": "Next Track",
+        "category": "Spotify",
+        "icon": "$(chevron-right)"
+      },
+      {
+        "command": "spotify.previous",
+        "title": "Previous Track",
+        "category": "Spotify",
+        "icon": "$(chevron-left)"
+      },
+      {
+        "command": "spotify.setVolume",
+        "title": "Set Volume",
+        "category": "Spotify",
+        "icon": "$(unmute)"
+      },
+      {
+        "command": "spotify.toggleShuffle",
+        "title": "Toggle Shuffle",
+        "category": "Spotify",
+        "icon": "$(symbol-boolean)"
+      },
+      {
+        "command": "spotify.toggleRepeat",
+        "title": "Toggle Repeat",
+        "category": "Spotify",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "spotify.addToQueue",
+        "title": "Add to Queue",
+        "category": "Spotify",
+        "icon": "$(add)"
+      },
+      {
+        "command": "spotify.playQueueTrack",
+        "title": "Play Track",
+        "category": "Spotify",
+        "icon": "$(play)"
+      },
+      {
+        "command": "spotify.moveQueueTrackUp",
+        "title": "Move Track Up",
+        "category": "Spotify",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "spotify.moveQueueTrackDown",
+        "title": "Move Track Down",
+        "category": "Spotify",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "spotify.removeFromQueue",
+        "title": "Remove from Queue",
+        "category": "Spotify",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "spotify.showMoreQueue",
+        "title": "Show More Queue Items",
+        "category": "Spotify",
+        "icon": "$(chevron-down)"
+      },
+      {
+        "command": "spotify.showLessQueue",
+        "title": "Show Less Queue Items",
+        "category": "Spotify",
+        "icon": "$(chevron-up)"
+      },
+      {
+        "command": "spotify.playPlaylist",
+        "title": "Play Playlist",
+        "category": "Spotify",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "spotify.authenticate",
+          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue",
+          "group": "navigation@1"
+        },
+        {
+          "command": "spotify.refresh",
+          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue",
+          "group": "navigation@2"
+        },
+        {
+          "command": "spotify.logout",
+          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "spotify.play",
+          "when": "view == spotifyControls && viewItem == playPause",
+          "group": "inline"
+        },
+        {
+          "command": "spotify.pause",
+          "when": "view == spotifyControls && viewItem == playPause",
+          "group": "inline"
+        },
+        {
+          "command": "spotify.addToQueue",
+          "when": "view == spotifyQueue && viewItem == addToQueue",
+          "group": "inline"
+        },
+        {
+          "command": "spotify.playQueueTrack",
+          "when": "view == spotifyQueue && viewItem == queueTrack",
+          "group": "1_play@1"
+        },
+        {
+          "command": "spotify.moveQueueTrackUp",
+          "when": "view == spotifyQueue && viewItem == queueTrack",
+          "group": "2_reorder@1"
+        },
+        {
+          "command": "spotify.moveQueueTrackDown",
+          "when": "view == spotifyQueue && viewItem == queueTrack",
+          "group": "2_reorder@2"
+        },
+        {
+          "command": "spotify.removeFromQueue",
+          "when": "view == spotifyQueue && viewItem == queueTrack",
+          "group": "3_remove@1"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "lint": "eslint src --ext ts --fix"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "autoprefixer": "^10.4.15",
+    "css-loader": "^6.8.1",
+    "eslint": "^8.47.0",
+    "html-webpack-plugin": "^5.5.3",
+    "postcss": "^8.4.29",
+    "postcss-loader": "^7.3.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "style-loader": "^3.3.3",
+    "tailwindcss": "^3.3.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "axios": "^1.5.0"
+  }
+}
