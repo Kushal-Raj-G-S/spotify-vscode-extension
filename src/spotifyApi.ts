@@ -275,4 +275,101 @@ export class SpotifyApiClient {
             play: play
         });
     }
+
+    // Lyrics functionality
+    public async getLyrics(trackName: string, artistName: string): Promise<string | null> {
+        // Clean up track name (remove feat., remix, etc. from track name for better matching)
+        const cleanTrack = trackName
+            .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheses content
+            .replace(/\s*\[.*?\]\s*/g, '') // Remove brackets content
+            .replace(/\s*-\s*(feat|ft|featuring|remix|remaster|remastered|version).*$/i, '') // Remove feat/remix
+            .trim();
+
+        const cleanArtist = artistName.split(',')[0].split('&')[0].trim(); // Take first artist only
+
+        console.log(`🎤 Fetching lyrics for: "${cleanTrack}" by "${cleanArtist}"`);
+
+        // Try multiple APIs in sequence
+        const apis = [
+            // API 1: lrclib.net (try first, more reliable)
+            async () => {
+                try {
+                    const response = await axios.get(
+                        `https://lrclib.net/api/get`,
+                        {
+                            params: {
+                                artist_name: cleanArtist,
+                                track_name: cleanTrack
+                            },
+                            timeout: 8000
+                        }
+                    );
+                    if (response.data && (response.data.plainLyrics || response.data.syncedLyrics)) {
+                        console.log('✅ Lyrics found via lrclib.net');
+                        // Prefer synced lyrics for better timing, fallback to plain
+                        return response.data.syncedLyrics || response.data.plainLyrics;
+                    }
+                } catch (err: any) {
+                    console.log('❌ lrclib.net failed:', err.response?.status || err.message);
+                }
+                return null;
+            },
+
+            // API 2: lyrics.ovh
+            async () => {
+                try {
+                    const response = await axios.get(
+                        `https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist)}/${encodeURIComponent(cleanTrack)}`,
+                        { timeout: 8000 }
+                    );
+                    if (response.data && response.data.lyrics) {
+                        console.log('✅ Lyrics found via lyrics.ovh');
+                        return response.data.lyrics;
+                    }
+                } catch (err: any) {
+                    console.log('❌ lyrics.ovh failed:', err.response?.status || err.message);
+                }
+                return null;
+            },
+            
+            // API 3: Genius API (search based - no API key needed for search)
+            async () => {
+                try {
+                    // Search for the song on Genius
+                    const searchResponse = await axios.get(
+                        `https://api.genius.com/search`,
+                        {
+                            params: {
+                                q: `${cleanTrack} ${cleanArtist}`
+                            },
+                            headers: {
+                                'Authorization': 'Bearer _no_key_needed_for_basic_search_'
+                            },
+                            timeout: 8000,
+                            validateStatus: () => true // Accept any status
+                        }
+                    );
+                    
+                    // Note: Genius API requires authentication for full access
+                    // This is a placeholder - users would need their own API key
+                    console.log('ℹ️ Genius API requires authentication key');
+                } catch (err: any) {
+                    console.log('❌ Genius API not configured');
+                }
+                return null;
+            }
+        ];
+
+        // Try each API until one succeeds
+        for (const api of apis) {
+            const result = await api();
+            if (result) {
+                return result;
+            }
+        }
+
+        console.warn(`⚠️ No lyrics found for "${cleanTrack}" by "${cleanArtist}"`);
+        console.log('💡 Tip: Try different search terms or check if the song has official lyrics available');
+        return null;
+    }
 }

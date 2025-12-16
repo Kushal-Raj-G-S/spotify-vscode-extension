@@ -2,6 +2,22 @@
 
 All notable changes to the "Spotify Player Pro" extension will be documented in this file.
 
+## [1.4.0] - 2025-12-15
+
+### Added
+- 🎤 **Synchronized Lyrics Display**: View real-time lyrics for the currently playing track
+- ✨ **Auto-Sync Highlighting**: Current line being sung is automatically highlighted
+- 🔄 **Auto-Fetch Lyrics**: Lyrics load automatically when tracks change (toggleable)
+- 📝 **Manual Refresh**: Retry button to fetch lyrics if they don't load initially
+- 🌍 **Multi-Language Support**: Perfect for understanding songs in foreign languages
+- 🎵 **Sing-Along Mode**: Great for developers who like to sing while coding
+- 📊 **Lyrics Panel**: New dedicated sidebar section for lyrics display
+
+### Improved
+- 🎯 Enhanced user experience with automatic lyrics synchronization
+- 💫 Better integration with playback progress tracking
+- 🔧 Fallback API support for better lyrics availability
+
 ## [1.3.0] - 2025-12-15
 
 ### Added

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SpotifyAuthProvider } from './spotifyAuth';
 import { SpotifyApiClient } from './spotifyApi';
-import { NowPlayingProvider, ControlsProvider, QueueProvider, PlaylistsProvider } from './panel/TreeViewProviders';
+import { NowPlayingProvider, ControlsProvider, QueueProvider, PlaylistsProvider, LyricsProvider } from './panel/TreeViewProviders';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Spotify VS Code Extension is now active!');
@@ -15,6 +15,11 @@ export function activate(context: vscode.ExtensionContext) {
     const controlsProvider = new ControlsProvider();
     const queueProvider = new QueueProvider();
     const playlistsProvider = new PlaylistsProvider();
+    const lyricsProvider = new LyricsProvider();
+
+    // Lyrics auto-fetch state
+    let lyricsAutoFetch = context.globalState.get('lyricsAutoFetch', true);
+    let lastFetchedTrackId: string | null = null;
 
     // Try auto-authentication on startup
     (async () => {
@@ -94,7 +99,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider('spotifyPlayer', nowPlayingProvider),
         vscode.window.registerTreeDataProvider('spotifyControls', controlsProvider),
         vscode.window.registerTreeDataProvider('spotifyQueue', queueProvider),
-        vscode.window.registerTreeDataProvider('spotifyPlaylists', playlistsProvider)
+        vscode.window.registerTreeDataProvider('spotifyPlaylists', playlistsProvider),
+        vscode.window.registerTreeDataProvider('spotifyLyrics', lyricsProvider)
     );
 
     // Register commands
@@ -289,12 +295,78 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Lyrics commands
+    const fetchLyricsCommand = vscode.commands.registerCommand('spotify.fetchLyrics', async () => {
+        try {
+            const currentTrack = await apiClient.getCurrentlyPlaying();
+            
+            if (!currentTrack || !currentTrack.item) {
+                vscode.window.showWarningMessage('No track is currently playing');
+                return;
+            }
+
+            const trackName = currentTrack.item.name;
+            const artistName = currentTrack.item.artists[0]?.name || 'Unknown';
+
+            lyricsProvider.setLoading(true);
+            
+            const lyrics = await apiClient.getLyrics(trackName, artistName);
+            
+            if (lyrics) {
+                lyricsProvider.updateLyrics(lyrics, currentTrack);
+                lastFetchedTrackId = currentTrack.item.id;
+                vscode.window.showInformationMessage(`🎤 Lyrics loaded for "${trackName}"!`);
+            } else {
+                lyricsProvider.updateLyrics(null, currentTrack);
+                vscode.window.showWarningMessage(`No lyrics found for "${trackName}" by ${artistName}`);
+            }
+        } catch (error) {
+            lyricsProvider.setLoading(false);
+            vscode.window.showErrorMessage(`Failed to fetch lyrics: ${error}`);
+        }
+    });
+
+    const toggleLyricsAutoFetchCommand = vscode.commands.registerCommand('spotify.toggleLyricsAutoFetch', async () => {
+        lyricsAutoFetch = !lyricsAutoFetch;
+        await context.globalState.update('lyricsAutoFetch', lyricsAutoFetch);
+        
+        if (lyricsAutoFetch) {
+            vscode.window.showInformationMessage('🎤 Auto-fetch lyrics enabled! Lyrics will load automatically for each track.');
+            // Fetch lyrics for current track if available
+            vscode.commands.executeCommand('spotify.fetchLyrics');
+        } else {
+            vscode.window.showInformationMessage('🎤 Auto-fetch lyrics disabled. Click "Fetch Lyrics" button to load manually.');
+        }
+    });
+
+    const searchLyricsOnlineCommand = vscode.commands.registerCommand('spotify.searchLyricsOnline', async (trackName?: string, artistName?: string) => {
+        let searchTrack = trackName;
+        let searchArtist = artistName;
+
+        if (!searchTrack || !searchArtist) {
+            const currentTrack = await apiClient.getCurrentlyPlaying();
+            if (currentTrack && currentTrack.item) {
+                searchTrack = currentTrack.item.name;
+                searchArtist = currentTrack.item.artists[0]?.name || '';
+            }
+        }
+
+        if (searchTrack && searchArtist) {
+            const searchQuery = encodeURIComponent(`${searchTrack} ${searchArtist} lyrics`);
+            const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+            vscode.env.openExternal(vscode.Uri.parse(searchUrl));
+        } else {
+            vscode.window.showWarningMessage('No track information available to search');
+        }
+    });
+
     context.subscriptions.push(
         authenticateCommand, logoutCommand, refreshCommand,
         playCommand, pauseCommand, nextCommand, previousCommand,
         setVolumeCommand, toggleShuffleCommand, toggleRepeatCommand,
         addToQueueCommand, togglePlayPauseCommand,
         showMoreQueueCommand, showLessQueueCommand, playPlaylistCommand,
+        fetchLyricsCommand, toggleLyricsAutoFetchCommand, searchLyricsOnlineCommand,
         ...statusBarItems
     );
 
@@ -353,6 +425,7 @@ export function activate(context: vscode.ExtensionContext) {
         controlsProvider.updateAuthStatus(isAuthenticated);
         queueProvider.updateAuthStatus(isAuthenticated);
         playlistsProvider.updateAuthStatus(isAuthenticated);
+        lyricsProvider.updateAuthStatus(isAuthenticated);
 
         if (!isAuthenticated) {
             updateStatusBar(null, false);
@@ -376,6 +449,45 @@ export function activate(context: vscode.ExtensionContext) {
             queueProvider.updateQueue(queueData);
             playlistsProvider.updatePlaylists(playlists.items || []);
 
+            // Update lyrics with current playback progress
+            if (currentlyPlaying && currentlyPlaying.item) {
+                lyricsProvider.updateProgress(currentlyPlaying.progress_ms);
+
+                // Auto-fetch lyrics when track changes
+                if (lyricsAutoFetch && currentlyPlaying.item.id !== lastFetchedTrackId) {
+                    const trackId = currentlyPlaying.item.id;
+                    const trackName = currentlyPlaying.item.name;
+                    const artistName = currentlyPlaying.item.artists[0]?.name || 'Unknown';
+                    
+                    // Immediately mark as fetched to prevent duplicate requests
+                    lastFetchedTrackId = trackId;
+                    
+                    lyricsProvider.setLoading(true);
+                    
+                    // Fetch lyrics in background
+                    apiClient.getLyrics(trackName, artistName).then(lyrics => {
+                        // Only update if still on same track
+                        if (trackId === lastFetchedTrackId) {
+                            if (lyrics) {
+                                console.log(`✅ Displaying lyrics for "${trackName}"`);
+                                lyricsProvider.updateLyrics(lyrics, currentlyPlaying);
+                            } else {
+                                console.log(`⚠️ No lyrics available for "${trackName}"`);
+                                lyricsProvider.updateLyrics(null, currentlyPlaying);
+                            }
+                        }
+                    }).catch(error => {
+                        console.error('Failed to fetch lyrics:', error);
+                        if (trackId === lastFetchedTrackId) {
+                            lyricsProvider.setLoading(false);
+                        }
+                    });
+                }
+            } else {
+                lyricsProvider.clearLyrics();
+                lastFetchedTrackId = null;
+            }
+
             // Update status bar with current track info
             updateStatusBar(currentlyPlaying, isAuthenticated);
 
@@ -386,8 +498,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    // Start periodic updates
-    const updateInterval = setInterval(updateAllProviders, 5000);
+    // Start periodic updates (more frequent for better lyrics sync)
+    const updateInterval = setInterval(updateAllProviders, 2000);
     context.subscriptions.push({ dispose: () => clearInterval(updateInterval) });
 
     // Initial update

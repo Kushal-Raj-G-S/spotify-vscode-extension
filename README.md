@@ -43,6 +43,14 @@ Every coffee makes a difference! ☕💻
 - **One-Click Playback**: Click any playlist to start playing it immediately
 - **Playlist Information**: Shows playlist name, owner, and track count
 
+### 🎤 Synchronized Lyrics Display ✨ NEW!
+- **Real-Time Lyrics**: View synchronized lyrics for the currently playing track
+- **Auto-Sync Highlighting**: Current line being sung is highlighted automatically
+- **Auto-Fetch**: Lyrics load automatically when tracks change (can be toggled)
+- **Manual Refresh**: Click to retry if lyrics don't load initially
+- **Multi-Language Support**: Great for understanding songs in foreign languages
+- **Sing-Along Ready**: Perfect for developers who like to sing while coding!
+
 ### 🔄 Persistent Authentication
 - **Auto-Connect**: Automatically connects on startup using stored credentials
 - **Smart Token Refresh**: Handles token expiration seamlessly in background
@@ -50,7 +58,7 @@ Every coffee makes a difference! ☕💻
 
 ## 📸 Interface Overview
 
-The extension adds a **"Spotify"** tab to your VS Code activity bar with three organized sections:
+The extension adds a **"Spotify"** tab to your VS Code activity bar with five organized sections:
 
 ### 🎵 Now Playing
 - Large album artwork for immersive music experience
@@ -70,6 +78,13 @@ The extension adds a **"Spotify"** tab to your VS Code activity bar with three o
 - Queue flows naturally from selected track (e.g., click track #5 → plays #5, #6, #7...)
 - Browse all your Spotify playlists
 - Add tracks by Spotify URI
+
+### 🎤 Lyrics (NEW!)
+- Real-time synchronized lyrics display
+- Current line highlighted automatically as song plays
+- Auto-fetch lyrics for each new track
+- Manual refresh button for retrying
+- Perfect for sing-alongs and language learning
 
 ## 🚀 Installation & Setup
 
@@ -104,7 +119,7 @@ The extension adds a **"Spotify"** tab to your VS Code activity bar with three o
 
 ### Sidebar Navigation
 - **Click the Spotify icon** in the Activity Bar to open the sidebar
-- **Three sections** will appear: Now Playing, Controls, and Queue
+- **Five sections** will appear: Now Playing, Controls, Queue, Playlists, and Lyrics
 - **Use toolbar buttons** in each section header for authentication and refresh
 
 ### Playback Control
@@ -118,6 +133,19 @@ The extension adds a **"Spotify"** tab to your VS Code activity bar with three o
 - **Add to Queue**: Click "Add track to queue" and paste a Spotify URI
 - **Track Info**: Hover over tracks to see full title and artist
 
+### Playlist Management
+- **Browse Playlists**: View all your Spotify playlists in the Playlists section
+- **Play Playlist**: Click any playlist to start playing immediately
+- **Playlist Details**: Hover to see owner and track count
+
+### 🎤 Lyrics Features (NEW!)
+- **Auto-Display**: Lyrics automatically appear when a new track starts playing
+- **Sync Highlighting**: Current line being sung is marked with ▶️ and highlighted
+- **Manual Fetch**: Click the refresh button in the Lyrics section header to retry
+- **Toggle Auto-Fetch**: Use command `Spotify: Toggle Auto-Fetch Lyrics` to enable/disable automatic loading
+- **Multi-Language**: Works with songs in any language (when lyrics are available)
+- **Sing-Along**: Perfect for coding sessions where you want to sing along!
+
 ### Available Commands (Ctrl/Cmd + Shift + P)
 - `Spotify: Authenticate` - Connect your Spotify account
 - `Spotify: Logout` - Disconnect from Spotify  
@@ -126,6 +154,8 @@ The extension adds a **"Spotify"** tab to your VS Code activity bar with three o
 - `Spotify: Set Volume` - Adjust volume with input
 - `Spotify: Toggle Shuffle/Repeat` - Change playback modes
 - `Spotify: Add to Queue` - Add track by URI
+- `Spotify: Fetch Lyrics` - Manually load lyrics for current track
+- `Spotify: Toggle Auto-Fetch Lyrics` - Enable/disable automatic lyrics loading
 
 ## 🛠️ Development
 

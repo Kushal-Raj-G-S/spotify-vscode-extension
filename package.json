@@ -1,8 +1,8 @@
 {
   "name": "spotify-vscode-extension",
   "displayName": "Spotify Player Pro",
-  "description": "🎵 Spotify integration with album artwork, queue display, status bar controls, and playback management",
-  "version": "1.3.0",
+  "description": "🎵 Spotify integration with album artwork, synchronized lyrics, queue display, status bar controls, and playback management",
+  "version": "1.4.0",
   "publisher": "kushal-raj-g-s",
   "author": {
     "name": "Kushal Raj G S",
@@ -26,7 +26,11 @@
     "queue",
     "controls",
     "sidebar",
-    "status-bar"
+    "status-bar",
+    "lyrics",
+    "synchronized-lyrics",
+    "karaoke",
+    "sing-along"
   ],
   "engines": {
     "vscode": "^1.80.0"
@@ -78,6 +82,12 @@
           "name": "Playlists",
           "when": "true",
           "icon": "$(music)"
+        },
+        {
+          "id": "spotifyLyrics",
+          "name": "Lyrics",
+          "when": "true",
+          "icon": "$(note)"
         }
       ]
     },
@@ -189,24 +199,47 @@
         "title": "Play Playlist",
         "category": "Spotify",
         "icon": "$(play)"
+      },
+      {
+        "command": "spotify.fetchLyrics",
+        "title": "Fetch Lyrics",
+        "category": "Spotify",
+        "icon": "$(note)"
+      },
+      {
+        "command": "spotify.toggleLyricsAutoFetch",
+        "title": "Toggle Auto-Fetch Lyrics",
+        "category": "Spotify",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "spotify.searchLyricsOnline",
+        "title": "Search Lyrics Online",
+        "category": "Spotify",
+        "icon": "$(globe)"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "spotify.authenticate",
-          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue",
+          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue || view == spotifyLyrics",
           "group": "navigation@1"
         },
         {
           "command": "spotify.refresh",
-          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue",
+          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue || view == spotifyLyrics",
           "group": "navigation@2"
         },
         {
           "command": "spotify.logout",
-          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue",
+          "when": "view == spotifyPlayer || view == spotifyControls || view == spotifyQueue || view == spotifyLyrics",
           "group": "navigation@3"
+        },
+        {
+          "command": "spotify.fetchLyrics",
+          "when": "view == spotifyLyrics",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [

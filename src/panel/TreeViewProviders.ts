@@ -457,6 +457,323 @@ export class QueueProvider implements vscode.TreeDataProvider<SpotifyTreeItem> {
     }
 }
 
+export class LyricsProvider implements vscode.TreeDataProvider<SpotifyTreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<SpotifyTreeItem | undefined | null | void> = new vscode.EventEmitter<SpotifyTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<SpotifyTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+
+    private lyrics: string | null = null;
+    private currentTrack: any = null;
+    private currentProgress: number = 0;
+    private isAuthenticated: boolean = false;
+    private isLoading: boolean = false;
+    private syncedLyrics: Array<{time: number, text: string}> = [];
+
+    constructor() {}
+
+    refresh(): void {
+        this._onDidChangeTreeData.fire();
+    }
+
+    updateLyrics(lyrics: string | null, track: any): void {
+        this.lyrics = lyrics;
+        this.currentTrack = track;
+        this.isLoading = false;
+        
+        // Parse LRC format if present (format: [mm:ss.xx]lyric text)
+        this.syncedLyrics = [];
+        if (lyrics && lyrics.includes('[')) {
+            const lrcRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)/g;
+            let match;
+            const lines: string[] = lyrics.split('\n');
+            
+            for (const line of lines) {
+                const match = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)/.exec(line);
+                if (match) {
+                    const minutes = parseInt(match[1]);
+                    const seconds = parseInt(match[2]);
+                    const milliseconds = match[3] ? parseInt(match[3].padEnd(3, '0')) : 0;
+                    const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + milliseconds;
+                    const text = match[4].trim();
+                    if (text) {
+                        this.syncedLyrics.push({ time: timeMs, text });
+                    }
+                }
+            }
+            console.log(`📝 Parsed ${this.syncedLyrics.length} synced lyric lines`);
+        }
+        
+        this.refresh();
+    }
+
+    updateProgress(progressMs: number): void {
+        this.currentProgress = progressMs;
+        // Only refresh if lyrics are loaded (avoids unnecessary refreshes)
+        if (this.lyrics && this.syncedLyrics.length > 0) {
+            this.refresh();
+        }
+    }
+
+    setLoading(loading: boolean): void {
+        this.isLoading = loading;
+        this.refresh();
+    }
+
+    clearLyrics(): void {
+        this.lyrics = null;
+        this.currentTrack = null;
+        this.currentProgress = 0;
+        this.isLoading = false;
+        this.refresh();
+    }
+
+    updateAuthStatus(isAuthenticated: boolean): void {
+        this.isAuthenticated = isAuthenticated;
+        this.refresh();
+    }
+
+    getTreeItem(element: SpotifyTreeItem): vscode.TreeItem {
+        return element;
+    }
+
+    getChildren(element?: SpotifyTreeItem): Thenable<SpotifyTreeItem[]> {
+        if (!this.isAuthenticated) {
+            return Promise.resolve([
+                new SpotifyTreeItem(
+                    '🔌 Not connected',
+                    vscode.TreeItemCollapsibleState.None,
+                    {
+                        command: 'spotify.authenticate',
+                        title: 'Connect to Spotify'
+                    },
+                    new vscode.ThemeIcon('plug'),
+                    'authenticate',
+                    'Connect your Spotify account to see lyrics'
+                )
+            ]);
+        }
+
+        if (this.isLoading) {
+            return Promise.resolve([
+                new SpotifyTreeItem(
+                    '⏳ Loading lyrics...',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('loading~spin'),
+                    'loading',
+                    'Fetching lyrics from server'
+                )
+            ]);
+        }
+
+        if (!this.currentTrack) {
+            return Promise.resolve([
+                new SpotifyTreeItem(
+                    '🎵 No track playing',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('music'),
+                    'noTrack',
+                    'Start playing music to see lyrics'
+                ),
+                new SpotifyTreeItem(
+                    '💡 Lyrics appear automatically',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('lightbulb'),
+                    'tip',
+                    'Lyrics will sync with the currently playing track'
+                )
+            ]);
+        }
+
+        if (!this.lyrics) {
+            const trackName = this.currentTrack.item?.name || 'Unknown';
+            const artistName = this.currentTrack.item?.artists?.[0]?.name || 'Unknown';
+            
+            return Promise.resolve([
+                new SpotifyTreeItem(
+                    '❌ Lyrics not available',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('error'),
+                    'noLyrics',
+                    `No lyrics found for "${trackName}" by ${artistName}`
+                ),
+                new SpotifyTreeItem(
+                    `🎵 "${trackName}"`,
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('note'),
+                    'trackInfo',
+                    `Search online: ${trackName} ${artistName} lyrics`
+                ),
+                new SpotifyTreeItem(
+                    '━'.repeat(30),
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    undefined,
+                    'separator'
+                ),
+                new SpotifyTreeItem(
+                    '💡 Why lyrics aren\'t showing:',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('lightbulb'),
+                    'info',
+                    'Common reasons for missing lyrics'
+                ),
+                new SpotifyTreeItem(
+                    '   • Song may not be in free lyrics databases',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('circle-outline'),
+                    'reason'
+                ),
+                new SpotifyTreeItem(
+                    '   • Regional/non-English songs have limited coverage',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('circle-outline'),
+                    'reason'
+                ),
+                new SpotifyTreeItem(
+                    '   • New releases may not be indexed yet',
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    new vscode.ThemeIcon('circle-outline'),
+                    'reason'
+                ),
+                new SpotifyTreeItem(
+                    '━'.repeat(30),
+                    vscode.TreeItemCollapsibleState.None,
+                    undefined,
+                    undefined,
+                    'separator'
+                ),
+                new SpotifyTreeItem(
+                    '🔄 Click to retry',
+                    vscode.TreeItemCollapsibleState.None,
+                    {
+                        command: 'spotify.fetchLyrics',
+                        title: 'Fetch Lyrics'
+                    },
+                    new vscode.ThemeIcon('refresh'),
+                    'retry',
+                    'Try fetching lyrics again'
+                ),
+                new SpotifyTreeItem(
+                    '🌐 Search lyrics online',
+                    vscode.TreeItemCollapsibleState.None,
+                    {
+                        command: 'spotify.searchLyricsOnline',
+                        title: 'Search Lyrics Online',
+                        arguments: [trackName, artistName]
+                    },
+                    new vscode.ThemeIcon('globe'),
+                    'searchOnline',
+                    `Open Google search for "${trackName} ${artistName} lyrics"`
+                )
+            ]);
+        }
+
+        // Parse and display lyrics with sync highlighting
+        const items: SpotifyTreeItem[] = [];
+        
+        // Add track info header
+        const trackName = this.currentTrack.item?.name || 'Unknown';
+        const artistName = this.currentTrack.item?.artists?.[0]?.name || 'Unknown';
+        
+        items.push(
+            new SpotifyTreeItem(
+                `🎤 "${trackName}"`,
+                vscode.TreeItemCollapsibleState.None,
+                undefined,
+                new vscode.ThemeIcon('note'),
+                'trackName',
+                `Lyrics for ${trackName} by ${artistName}`
+            )
+        );
+
+        items.push(
+            new SpotifyTreeItem(
+                `👤 ${artistName}`,
+                vscode.TreeItemCollapsibleState.None,
+                undefined,
+                new vscode.ThemeIcon('person'),
+                'artistName',
+                `Artist: ${artistName}`
+            )
+        );
+
+        items.push(
+            new SpotifyTreeItem(
+                '━'.repeat(30),
+                vscode.TreeItemCollapsibleState.None,
+                undefined,
+                undefined,
+                'separator'
+            )
+        );
+
+        // Use synced lyrics if available, otherwise fall back to simple division
+        if (this.syncedLyrics.length > 0) {
+            // Display synced lyrics with accurate timestamps
+            this.syncedLyrics.forEach((lyricLine, index) => {
+                const nextLine = this.syncedLyrics[index + 1];
+                const isCurrentLine = this.currentProgress >= lyricLine.time && 
+                                     (!nextLine || this.currentProgress < nextLine.time);
+                
+                const displayLine = isCurrentLine ? `▶️ ${lyricLine.text}` : `   ${lyricLine.text}`;
+                const icon = isCurrentLine ? new vscode.ThemeIcon('play-circle') : new vscode.ThemeIcon('circle-outline');
+                
+                items.push(
+                    new SpotifyTreeItem(
+                        displayLine,
+                        vscode.TreeItemCollapsibleState.None,
+                        undefined,
+                        icon,
+                        'lyricLine',
+                        isCurrentLine ? `🎵 Currently singing: ${lyricLine.text}` : lyricLine.text
+                    )
+                );
+            });
+        } else {
+            // Fallback: Split lyrics into lines and estimate timing
+            const lyricsLines = this.lyrics.split('\n').filter(line => {
+                // Filter out LRC timestamps and empty lines
+                const cleaned = line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+                return cleaned !== '';
+            });
+            const totalDuration = this.currentTrack.item?.duration_ms || 1;
+            const timePerLine = totalDuration / lyricsLines.length;
+
+            lyricsLines.forEach((line, index) => {
+                // Remove any remaining timestamps from display
+                const cleanLine = line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+                const lineStartTime = index * timePerLine;
+                const isCurrentLine = this.currentProgress >= lineStartTime && 
+                                     this.currentProgress < (lineStartTime + timePerLine);
+                
+                const displayLine = isCurrentLine ? `▶️ ${cleanLine}` : `   ${cleanLine}`;
+                const icon = isCurrentLine ? new vscode.ThemeIcon('play-circle') : new vscode.ThemeIcon('circle-outline');
+                
+                items.push(
+                    new SpotifyTreeItem(
+                        displayLine,
+                        vscode.TreeItemCollapsibleState.None,
+                        undefined,
+                        icon,
+                        'lyricLine',
+                        isCurrentLine ? `🎵 Currently singing: ${cleanLine}` : cleanLine
+                    )
+                );
+            });
+        }
+
+        return Promise.resolve(items);
+    }
+}
+
 export class PlaylistsProvider implements vscode.TreeDataProvider<SpotifyTreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<SpotifyTreeItem | undefined | null | void> = new vscode.EventEmitter<SpotifyTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<SpotifyTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
